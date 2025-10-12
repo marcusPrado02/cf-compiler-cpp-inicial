@@ -21,7 +21,7 @@ enum class TokenKind {
 
 struct Token {
     TokenKind kind{TokenKind::Invalid};
-    std::string lexeme{}; // spelling original (mantido para mensagens)
+    std::string lexeme{};
     Position pos{};
 };
 
