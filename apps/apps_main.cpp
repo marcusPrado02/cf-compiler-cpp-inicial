@@ -8,6 +8,7 @@
 #include "cf/lexer/token.hpp"
 #include <parser.hpp>
 #include <ast_dump.hpp>
+#include <semantics.hpp>
 
 /**
  * Lê todo o conteúdo de um stream para uma string.
@@ -45,7 +46,7 @@ int main(int argc, char** argv){
         /**
          * Lê o arquivo de entrada.
          */
-        bool dumpTokens = false, dumpAst = false;
+        bool dumpTokens = false, dumpAst = false, checkSem = false;
         std::string file;
 
         /**
@@ -56,6 +57,7 @@ int main(int argc, char** argv){
             if (a == "-h" || a == "--help"){ usage(); return 0; }
             else if (a == "--dump-tokens"){ dumpTokens = true; }
             else if (a == "--dump-ast"){ dumpAst = true; }
+            else if (a == "--check-semantics"){ checkSem = true; }
             else { file = a; }
         }
 
@@ -86,7 +88,7 @@ int main(int argc, char** argv){
         }
 
         /**
-         * 
+         * Se a opção --dump-ast foi fornecida, cria um parser, analisa o programa e imprime o AST.
          */
         if (dumpAst){
             cf::Lexer lex(src);
@@ -95,6 +97,20 @@ int main(int argc, char** argv){
             cf::AstDump{std::cout}.dump(prog);
             return 0;
         }
+
+        /**
+         * Se a opção --check-semantics foi fornecida, cria um parser, analisa o programa e verifica a semântica.
+         */
+        if (checkSem){
+            cf::Lexer lex(src);
+            cf::Parser p(std::move(lex));
+            cf::Program prog = p.parse_program();
+            cf::Semantic sem;
+            sem.analyze(prog);
+            std::cout << "Semantics: OK\n";
+            return 0;
+        }
+
 
         /**
          * Caso contrário, cria um driver e compila o código para assembly, imprimindo o resultado.
