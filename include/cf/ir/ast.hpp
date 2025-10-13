@@ -14,6 +14,7 @@ namespace cf {
     // ---- Expressões ----
     struct Expr {
         Position pos{};
+        CfType inferred{CfType::Desconhecido}; // <- tipo inferido pelo analisador semântico
         virtual ~Expr() = default;
     };
 
