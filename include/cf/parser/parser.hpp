@@ -1,47 +1,56 @@
 #pragma once
-#include "cf/lexer/lexer.hpp"
+#include <memory>
 #include "cf/ir/ast.hpp"
+#include "cf/lexer/lexer.hpp"
+#include "cf/common/diagnostic.hpp"
 
 namespace cf {
 
-class Parser {
-public:
-    explicit Parser(Lexer lex);
-    Program parse();
-private:
-    // helpers
-    const Token& tok();
-    const Token& eat(TokenKind k, const char* what);
-    bool accept(TokenKind k);
-    bool accept2(TokenKind a, TokenKind b);
-    bool at(TokenKind k) const;
-    void next();
-    // grammar
-    Program parse_program();
-    std::unique_ptr<Stmt> parse_decl_or_cmd();
-    std::unique_ptr<Stmt> parse_declvar();
-    Stmt::Type parse_type();
-    std::unique_ptr<Stmt> parse_cmd();
-    std::unique_ptr<Stmt> parse_block();
-    std::unique_ptr<Stmt> parse_assign_stmt();
-    std::unique_ptr<Stmt> parse_while();
-    std::unique_ptr<Stmt> parse_if();
-    std::unique_ptr<Stmt> parse_for();
-    std::unique_ptr<Stmt> parse_print();
+    class Parser {
+    public:
+        explicit Parser(Lexer lex) : lex_(std::move(lex)) {}
+        Program parse_program();
 
-    // expressions (precedência)
-    ExprPtr parse_expr();      // Or
-    ExprPtr parse_or();
-    ExprPtr parse_and();
-    ExprPtr parse_rel();
-    ExprPtr parse_add();
-    ExprPtr parse_mul();
-    ExprPtr parse_pow();
-    ExprPtr parse_unary();
-    ExprPtr parse_primary();
+    private:
+        // helpers
+        const Token& peek() { return lex_.peek(); }
+        Token next() { return lex_.next(); }
+        bool at(TokenKind k) { return lex_.peek().kind == k; }
+        bool eat(TokenKind k, const char* expectMsg = nullptr);
+        void expect(TokenKind k, const char* msg);
 
-    Lexer lex_;
-    Token t_;
-};
+        // mapeia keyword de tipo para CfType
+        static CfType map_type(TokenKind k);
+
+        // não-terminais
+        StmtPtr parse_decl_or_stmt();
+        StmtPtr parse_declaration();
+        StmtPtr parse_statement();
+        StmtPtr parse_assign_tail_after_ident(Token identTok);
+        std::vector<StmtPtr> parse_block(); // consome { ... }
+        StmtPtr parse_if();
+        StmtPtr parse_while();
+        StmtPtr parse_for();
+        StmtPtr parse_print();
+
+        // expressões (precedência)
+        ExprPtr parse_expr();        // ExprLogico
+        ExprPtr parse_logical();
+        ExprPtr parse_rel();
+        ExprPtr parse_add();
+        ExprPtr parse_mul();
+        ExprPtr parse_pow();         // right-assoc
+        ExprPtr parse_primary();
+
+        // util para mensagens
+        [[noreturn]] void syntax_error(const Token& got, const std::string& msg);
+        Position pos_of(const Token& t) const { return t.pos; }
+
+    private:
+        /**
+         * Lexer usado para obter tokens do fonte.
+         */
+        Lexer lex_;
+    };
 
 }

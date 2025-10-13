@@ -6,6 +6,8 @@
 #include "cf/common/diagnostic.hpp"
 #include "cf/lexer/lexer.hpp"
 #include "cf/lexer/token.hpp"
+#include <parser.hpp>
+#include <ast_dump.hpp>
 
 /**
  * Lê todo o conteúdo de um stream para uma string.
@@ -43,7 +45,7 @@ int main(int argc, char** argv){
         /**
          * Lê o arquivo de entrada.
          */
-        bool dumpTokens = false;
+        bool dumpTokens = false, dumpAst = false;
         std::string file;
 
         /**
@@ -53,6 +55,7 @@ int main(int argc, char** argv){
             std::string a = argv[i];
             if (a == "-h" || a == "--help"){ usage(); return 0; }
             else if (a == "--dump-tokens"){ dumpTokens = true; }
+            else if (a == "--dump-ast"){ dumpAst = true; }
             else { file = a; }
         }
 
@@ -79,6 +82,17 @@ int main(int argc, char** argv){
                           << t.pos.line << ":" << t.pos.column << "\n";
                 if (t.kind == cf::TokenKind::End) break;
             }
+            return 0;
+        }
+
+        /**
+         * 
+         */
+        if (dumpAst){
+            cf::Lexer lex(src);
+            cf::Parser p(std::move(lex));
+            cf::Program prog = p.parse_program();
+            cf::AstDump{std::cout}.dump(prog);
             return 0;
         }
 
