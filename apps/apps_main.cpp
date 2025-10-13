@@ -30,7 +30,10 @@ static void usage(){
               << "Uso: cf <arquivo.cf> [opcoes]\n"
               << "Opcoes:\n"
               << "  -h,--help           mostra ajuda\n"
-              << "  --dump-tokens       imprime a sequencia de tokens\n";
+              << "  --dump-tokens       imprime a sequencia de tokens\n"
+              << "  --dump-ast          imprime a AST apos o parse\n"
+              << "  --check-semantics   executa analise semantica e informa 'OK' se passar\n"
+              << "  --emit-asm          gera assembly RISC-V (RV32IM) para stdout\n";
 }
 
 int main(int argc, char** argv){
@@ -46,7 +49,7 @@ int main(int argc, char** argv){
         /**
          * Lê o arquivo de entrada.
          */
-        bool dumpTokens = false, dumpAst = false, checkSem = false;
+        bool dumpTokens = false, dumpAst = false, checkSem = false, emitAsm = false;
         std::string file;
 
         /**
@@ -58,6 +61,7 @@ int main(int argc, char** argv){
             else if (a == "--dump-tokens"){ dumpTokens = true; }
             else if (a == "--dump-ast"){ dumpAst = true; }
             else if (a == "--check-semantics"){ checkSem = true; }
+            else if (a == "--emit-asm"){ emitAsm = true; }
             else { file = a; }
         }
 
@@ -87,13 +91,14 @@ int main(int argc, char** argv){
             return 0;
         }
 
+        cf::Lexer lex(src);
+        cf::Parser p(std::move(lex));
+        cf::Program prog = p.parse_program();
+
         /**
          * Se a opção --dump-ast foi fornecida, cria um parser, analisa o programa e imprime o AST.
          */
         if (dumpAst){
-            cf::Lexer lex(src);
-            cf::Parser p(std::move(lex));
-            cf::Program prog = p.parse_program();
             cf::AstDump{std::cout}.dump(prog);
             return 0;
         }
@@ -102,21 +107,33 @@ int main(int argc, char** argv){
          * Se a opção --check-semantics foi fornecida, cria um parser, analisa o programa e verifica a semântica.
          */
         if (checkSem){
-            cf::Lexer lex(src);
-            cf::Parser p(std::move(lex));
-            cf::Program prog = p.parse_program();
-            cf::Semantic sem;
-            sem.analyze(prog);
+            cf::Semantic sem; sem.analyze(prog);
             std::cout << "Semantics: OK\n";
+            return 0;
+        }
+
+        /**
+         * Se a opção --emit-asm foi fornecida, cria um parser, analisa o programa, verifica a semântica e gera assembly.
+         */
+        if (emitAsm){
+            cf::Semantic sem; sem.analyze(prog);
+            cf::Codegen cg;
+            std::string asmcode = cg.emit(prog);
+            std::cout << asmcode;
             return 0;
         }
 
 
         /**
-         * Caso contrário, cria um driver e compila o código para assembly, imprimindo o resultado.
+         * Caminho normal (pipeline completo até asm — se seu Driver já existia)
+         * 
+         * - Analisa o programa (semântica); se falhar, lança CompileError.
+         * - Gera assembly RISC-V (RV32IM) para o programa.
+         * - Imprime o código assembly gerado.
          */
-        cf::Driver d;
-        std::string asmcode = d.compile_to_asm(src);
+        cf::Semantic sem; sem.analyze(prog);
+        cf::Codegen cg;
+        std::string asmcode = cg.emit(prog);
         std::cout << asmcode << std::endl;
         return 0;
     } catch (const cf::CompileError& e){
