@@ -212,7 +212,7 @@ namespace cf {
    * Armazena o valor de a0 em uma variável.
    * 
    * - Se a variável for Inteiro, usa sw.
-   * - Senão 
+   * - Senão:
    *    - Se for Logico, normaliza a0 para 0xFF/0x00. 
    *    - Se for Caractere, aplica AND com 0xFF para garantir 1 byte.
    *    - Usa sb para armazenar 1 byte.

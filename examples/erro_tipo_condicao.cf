@@ -1,0 +1,6 @@
+Inteiro x;
+x <- 10;
+
+Se x {
+  Imprimir("isso nao deveria compilar\n");
+}

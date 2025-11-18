@@ -1,0 +1,3 @@
+Inteiro x;
+x <- 2 + 3 * 4;
+Imprimir("x = ", x, "\n");

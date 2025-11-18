@@ -1,0 +1,4 @@
+Inteiro x
+
+x <- 10;
+Imprimir("Faltou ponto e virgula na declaracao\n");

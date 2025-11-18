@@ -9,6 +9,7 @@
 #include <parser.hpp>
 #include <ast_dump.hpp>
 #include <semantics.hpp>
+#include <optimizer.hpp>
 
 /**
  * Lê todo o conteúdo de um stream para uma string.
@@ -123,6 +124,11 @@ int main(int argc, char** argv){
             return 0;
         }
 
+        /**
+         * Otimiza o programa usando o otimizador definido em optimizer.hpp.
+         */
+        cf::Optimizer opt;
+        opt.run(prog);
 
         /**
          * Caminho normal (pipeline completo até asm — se seu Driver já existia)

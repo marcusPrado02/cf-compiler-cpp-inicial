@@ -1,0 +1,11 @@
+Inteiro x;
+Caractere c;
+Logico b;
+
+x <- 65;
+c <- 'A';
+b <- Verdade;
+
+Se b {
+  Imprimir("x = ", x, " c = ", c, "\n");
+}

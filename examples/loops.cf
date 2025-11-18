@@ -1,0 +1,13 @@
+Inteiro i;
+
+Imprimir("Loop Enquanto:\n");
+i <- 3;
+Enquanto i <> 0 {
+  Imprimir("i = ", i, "\n");
+  i <- i - 1;
+}
+
+Imprimir("Loop Para:\n");
+Para j em (1, 5, 2) {
+  Imprimir("j = ", j, "\n");
+}
