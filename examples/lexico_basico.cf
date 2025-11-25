@@ -1,7 +1,0 @@
-Inteiro x;
-Inteiro y;
-
-x <- 10;
-y <- x + 20;
-
-Imprimir("Resultado = ", y, "\n");

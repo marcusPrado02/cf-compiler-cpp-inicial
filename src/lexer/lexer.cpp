@@ -33,6 +33,22 @@ namespace cf {
      * (Consome um token)
      */
     Token Lexer::next() {
+        // ---------------------------------------
+        // IGNORAR COMENTÁRIOS /* ... */
+        // ---------------------------------------
+        if (peekc() == '/' && peekc(1) == '*') {
+            get(); get(); // consome /*
+
+            while (true) {
+                if (peekc() == '\0') break; // EOF sem fechar comentário
+                if (peekc() == '*' && peekc(1) == '/') {
+                    get(); get(); // consome */
+                    break;
+                }
+                get(); // avança dentro do comentário
+            }
+            return next(); // volta ao fluxo normal
+        }
         Token out = current_;
         if (out.kind != TokenKind::End) {
             current_ = lex_token();
@@ -137,15 +153,19 @@ namespace cf {
      * - Se um comentário de bloco '$$' não for fechado.
      */
     void Lexer::skip_spaces_and_comments(){
-        for(;;){
-            while (std::isspace((unsigned char)peekc())) get();
+        for (;;) {
 
-            if (peekc() == '$'){
-                if (peekc(1) == '$'){
-                    // Comentário de bloco: $$ ... $$ (não aninhado)
+            // 1) Espaços em branco
+            while (std::isspace((unsigned char)peekc()))
+                get();
+
+            // 2) Comentários iniciados por '$'
+            if (peekc() == '$') {
+                if (peekc(1) == '$') {
+                    // Comentário de bloco: $$ ... $$
                     get(); get(); // "$$"
-                    while (true){
-                        if (peekc() == '\0'){
+                    while (true) {
+                        if (peekc() == '\0') {
                             Diagnostic d;
                             d.phase = "lexical";
                             d.pos = pos_;
@@ -153,7 +173,7 @@ namespace cf {
                             d.line_text = current_line_text();
                             throw CompileError(d);
                         }
-                        if (peekc() == '$' && peekc(1) == '$'){
+                        if (peekc() == '$' && peekc(1) == '$') {
                             get(); get(); // fecha "$$"
                             break;
                         }
@@ -162,13 +182,46 @@ namespace cf {
                     continue;
                 } else {
                     // Comentário de linha: $ ... \n
-                    while (peekc() != '\n' && peekc() != '\0') get();
+                    while (peekc() != '\n' && peekc() != '\0')
+                        get();
                     continue;
                 }
             }
+
+            // 3) NOVO — Comentário de linha estilo C++: //
+            if (peekc() == '/' && peekc(1) == '/') {
+                get(); get(); // "//"
+                while (peekc() != '\n' && peekc() != '\0')
+                    get();
+                continue;
+            }
+
+            // 4) NOVO — Comentário de bloco estilo C: /* ... */
+            if (peekc() == '/' && peekc(1) == '*') {
+                get(); get(); // "/*"
+                while (true) {
+                    if (peekc() == '\0') {
+                        Diagnostic d;
+                        d.phase = "lexical";
+                        d.pos = pos_;
+                        d.message = "comentário de bloco '/*' não fechado";
+                        d.line_text = current_line_text();
+                        throw CompileError(d);
+                    }
+                    if (peekc() == '*' && peekc(1) == '/') {
+                        get(); get(); // "*/"
+                        break;
+                    }
+                    get();
+                }
+                continue;
+            }
+
+            // Nada mais para pular
             break;
         }
     }
+
 
     /**
      * Lê um identificador(apenas letras) ou palavra-chave.
@@ -182,29 +235,58 @@ namespace cf {
      */
     Token Lexer::lex_identifier_or_keyword(){
         std::string lx;
-        if (!std::isalpha((unsigned char)peekc())){
+
+        // 1) Primeiro caractere deve ser "letra" no sentido mais amplo:
+        //    - isalpha ASCII
+        //    - OU qualquer byte >= 128 (parte de caractere acentuado em UTF-8)
+        unsigned char c0 = static_cast<unsigned char>(peekc());
+        if (!std::isalpha(c0) && c0 < 0x80) {
             char bad = get();
-            Diagnostic d; d.phase="lexical"; d.pos=pos_; d.message=std::string("símbolo inválido '")+bad+"'";
+            Diagnostic d;
+            d.phase    = "lexical";
+            d.pos      = pos_;
+            d.message  = std::string("símbolo inválido '") + bad + "'";
             d.line_text = current_line_text();
             throw CompileError(d);
         }
-        while (std::isalpha((unsigned char)peekc())){
-            lx.push_back(get());
+
+        // 2) Consumir sequência de "letras" (ASCII ou bytes UTF-8 >= 128)
+        while (true) {
+            unsigned char c = static_cast<unsigned char>(peekc());
+            if (c == '\0') break;
+            if (std::isalpha(c) || c >= 0x80) {
+                lx.push_back(get());
+            } else {
+                break;
+            }
         }
+
+        // 3) Case-folding só para ASCII; bytes >=128 ficam como estão.
         std::string low = lower(lx);
+
+        // 4) Palavras-chave (com e sem acento)
         if (low == "inteiro") return make(TokenKind::KwInteiro, lx);
+
+        // aceita "Logico" e "Lógico"
         if (low == "logico" || low == "lógico") return make(TokenKind::KwLogico, lx);
+
         if (low == "caractere") return make(TokenKind::KwCaractere, lx);
         if (low == "enquanto") return make(TokenKind::KwEnquanto, lx);
-        if (low == "se") return make(TokenKind::KwSe, lx);
+        if (low == "se")        return make(TokenKind::KwSe, lx);
+
+        // aceita "Senao" e "Senão"
         if (low == "senao" || low == "senão") return make(TokenKind::KwSenao, lx);
-        if (low == "para") return make(TokenKind::KwPara, lx);
-        if (low == "imprimir") return make(TokenKind::KwImprimir, lx);
-        if (low == "verdade") return make(TokenKind::KwVerdade, lx);
-        if (low == "mentira") return make(TokenKind::KwMentira, lx);
-        if (low == "em") return make(TokenKind::KwEm, lx);
+
+        if (low == "para")      return make(TokenKind::KwPara, lx);
+        if (low == "imprimir")  return make(TokenKind::KwImprimir, lx);
+        if (low == "verdade")   return make(TokenKind::KwVerdade, lx);
+        if (low == "mentira")   return make(TokenKind::KwMentira, lx);
+        if (low == "em")        return make(TokenKind::KwEm, lx);
+
+        // 5) Caso contrário, é identificador (permitindo acentos, se quiser usar)
         return make(TokenKind::Identifier, lx);
     }
+
 
     /**
      * Lê um número inteiro (sequência de dígitos).
@@ -337,6 +419,7 @@ namespace cf {
             case '>': get(); return make(TokenKind::Gt, ">");
             case '<': get(); return make(TokenKind::Lt, "<");
             case '&': get(); return make(TokenKind::And, "&");
+            case '|': get(); return make(TokenKind::Or, "|");
             case '^': get(); return make(TokenKind::Or, "^");
             case '"': return lex_string();
             case '\'': return lex_char();

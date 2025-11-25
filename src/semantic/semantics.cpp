@@ -56,12 +56,19 @@ namespace cf {
      * Declara uma variável no escopo atual.
      * 
      * - Se já existe no mesmo escopo, erro.
-     * - Usa scopes_.declare para tentar declarar.
-     * - Se falhar, lança sem_error com mensagem apropriada.
+     * - Se possuir inicialização (`init`), verifica o tipo da expressão
+     *   e a compatibilidade de atribuição.
      */
     void Semantic::check_decl(StmtDecl& s) {
         if (!scopes_.declare(s.name, s.type)) {
             sem_error(s.pos, "redeclaracao de '" + s.name + "' no mesmo escopo");
+        }
+        // Inicialização opcional: Tipo nome <- Expr
+        if (s.init) {
+            CfType rhs = check_expr(*s.init);
+            if (!assign_compatible(s.type, rhs)) {
+                sem_error(s.pos, "inicializacao incompatível de '" + s.name + "'");
+            }
         }
     }
 
@@ -169,8 +176,9 @@ namespace cf {
         }
         if (s.step.has_value()) {
             CfType ts = check_expr(**s.step);
-            if (!is_int(promote_if_needed(ts))) {
-                sem_error((**s.step).pos, "passo do 'Para' deve ser Inteiro/Caractere (promovido a Inteiro)");
+            // Para o passo, exigimos estritamente tipo Inteiro (sem promoção de Caractere)
+            if (!is_int(ts)) {
+                sem_error((**s.step).pos, "passo do 'Para' deve ser Inteiro");
             }
         }
         for (auto& st : s.body) check_stmt(*st);
@@ -216,6 +224,11 @@ namespace cf {
         if (auto* g = dynamic_cast<ExprGroup*>(&e)) {
             return check_group(*g);
         }
+        if (auto* b = dynamic_cast<ExprBool*>(&e)) {
+            e.inferred = CfType::Logico;
+            return e.inferred;
+        }
+
         // fallback
         e.inferred = CfType::Desconhecido;
         return e.inferred;

@@ -1,8 +1,0 @@
-Inteiro x;
-x <- 5;
-
-Se x > 0 {
-  Imprimir("Positivo\n");
-} Senao {
-  Imprimir("Nao positivo\n");
-}

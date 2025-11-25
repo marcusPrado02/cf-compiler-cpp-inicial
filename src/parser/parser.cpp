@@ -84,11 +84,13 @@ namespace cf {
     // ---------- Declarações ----------
 
     /**
-     * Declaração: Tipo Ident ';'
-     * 
+     * Declaração:
+     *   - Forma simples:  Tipo Ident ';'
+     *   - Com inicialização: Tipo Ident '<-' Expr ';'
+     *
      * - Consome keyword de tipo (KwInteiro/Logico/Caractere).
      * - Consome identificador.
-     * - Se o próximo token não é identificador, lança erro de sintaxe.
+     * - Opcionalmente, consome '<-' Expr como inicialização.
      * - Consome ';'.
      * - Retorna StmtDecl.
      */
@@ -99,12 +101,19 @@ namespace cf {
         if (!eat(TokenKind::Identifier)) {
             syntax_error(ident, "esperado identificador após tipo");
         }
-        StmtDecl* d = new StmtDecl{};
+        auto d = std::make_unique<StmtDecl>();
         d->pos = typeTok.pos;
         d->type = ty;
         d->name = ident.lexeme;
+
+        // Inicialização opcional: Tipo Ident '<-' Expr
+        if (at(TokenKind::Assign)) {
+            next(); // consume '<-'
+            d->init = parse_expr();
+        }
+
         expect(TokenKind::Semicolon, "esperado ';' após declaração");
-        return StmtPtr(d);
+        return d;
     }
 
     // ---------- Comandos ----------
@@ -474,6 +483,20 @@ namespace cf {
                 auto e = std::make_unique<ExprGroup>();
                 e->pos = t.pos;
                 e->inner = std::move(inner);
+                return e;
+            }
+            case TokenKind::KwVerdade: {
+                next();
+                auto e = std::make_unique<ExprBool>();
+                e->pos = t.pos;
+                e->value = true;
+                return e;
+            }
+            case TokenKind::KwMentira: {
+                next();
+                auto e = std::make_unique<ExprBool>();
+                e->pos = t.pos;
+                e->value = false;
                 return e;
             }
             default:

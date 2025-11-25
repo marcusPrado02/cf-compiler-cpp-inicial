@@ -24,8 +24,8 @@ endif()
 
 include(GNUInstallDirs)
 
+enable_testing()
+
 add_subdirectory(src)
 add_subdirectory(apps)
 add_subdirectory(tests)
-
-enable_testing()

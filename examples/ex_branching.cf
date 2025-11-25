@@ -1,0 +1,20 @@
+Inteiro nota;
+Lógico aprovado;
+
+nota <- 7;
+aprovado <- Verdade;
+
+Imprimir("=== Exemplo: If/Else ===\n");
+Imprimir("Nota = ", nota, "\n");
+
+Se nota >= 6 {
+    Imprimir("Aluno aprovado!\n");
+} Senao {
+    Imprimir("Aluno reprovado.\n");
+}
+
+Se aprovado {
+    Imprimir("Flag 'aprovado' tambem esta Verdade.\n");
+} Senao {
+    Imprimir("Flag 'aprovado' esta Mentira.\n");
+}

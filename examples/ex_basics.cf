@@ -1,0 +1,12 @@
+Inteiro x;
+Inteiro y;
+Inteiro z;
+
+x <- 10;
+y <- 20;
+z <- x + y;
+
+Imprimir("=== Exemplo: Basico ===\n");
+Imprimir("x = ", x, "\n");
+Imprimir("y = ", y, "\n");
+Imprimir("z = x + y = ", z, "\n");

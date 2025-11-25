@@ -5,7 +5,13 @@
 namespace cf {
     // ---------- helpers de literal ----------
 
-    // ExprInteger: converte digits -> int
+    /**
+     * Verifica se a expressão é um literal inteiro e obtém seu valor.
+     * 
+     * @param e expressão a verificar
+     * @param value referência para armazenar o valor inteiro
+     * @return true se for um literal inteiro, false caso contrário
+     */
     bool Optimizer::int_literal(const Expr* e, int& value) {
         if (auto i = dynamic_cast<const ExprInteger*>(e)) {
             try {
@@ -18,8 +24,15 @@ namespace cf {
         return false;
     }
 
-    // Inteiro ou Caractere tratado como inteiro
+    /**
+     * Verifica se a expressão é um literal inteiro ou caractere e obtém seu valor como inteiro.
+     * 
+     * @param e expressão a verificar
+     * @param value referência para armazenar o valor inteiro
+     * @return true se for um literal inteiro ou caractere, false caso contrário
+     */
     bool Optimizer::int_like_literal(const Expr* e, int& value) {
+        // Se for inteiro, obtém o valor
         if (auto i = dynamic_cast<const ExprInteger*>(e)) {
             try {
                 value = std::stoi(i->digits);
@@ -28,6 +41,7 @@ namespace cf {
                 return false;
             }
         }
+        // Se for caractere, obtém o valor ASCII
         if (auto c = dynamic_cast<const ExprChar*>(e)) {
             // content tem 1 char ou escape simples
             if (c->content.size() == 1) {
@@ -52,6 +66,12 @@ namespace cf {
 
     // ---------- expr ----------
 
+    /**
+     * Otimiza um ExprGroup, otimizando seu inner e possivelmente removendo o Group.
+     * 
+     * @param grp ponteiro para o ExprGroup a otimizar
+     * @return ExprPtr otimizado (pode ser o inner diretamente)
+     */
     ExprPtr Optimizer::optimize_group(ExprGroup* grp) {
         grp->inner = optimize_expr(std::move(grp->inner));
         // Se o inner virou literal/ident/binário já simples, podemos opcionalmente
@@ -66,6 +86,12 @@ namespace cf {
         return ExprPtr(grp);
     }
 
+    /**
+     * Otimiza um ExprBinary, aplicando constant folding e simplificações algébricas.
+     * 
+     * @param bin ponteiro para o ExprBinary a otimizar
+     * @return ExprPtr otimizado (pode ser um literal ou o próprio binário)
+     */
     ExprPtr Optimizer::optimize_binary(ExprBinary* bin) {
         // Primeiro otimiza recursivamente os filhos
         bin->lhs = optimize_expr(std::move(bin->lhs));
@@ -159,14 +185,21 @@ namespace cf {
         return ExprPtr(bin);
     }
 
+    /**
+     * Otimiza uma expressão genérica, despachando para funções especializadas.
+     * @param e expressão a otimizar
+     * @return ExprPtr expressão otimizada
+     */
     ExprPtr Optimizer::optimize_expr(ExprPtr e) {
         if (!e) return nullptr;
 
+        // Se for binário, despacha
         if (auto* bin = dynamic_cast<ExprBinary*>(e.get())) {
             // transfere ownership pra função especializada
             e.release();
             return optimize_binary(bin);
         }
+        // Se for group, despacha
         if (auto* grp = dynamic_cast<ExprGroup*>(e.get())) {
             e.release();
             return optimize_group(grp);
@@ -178,40 +211,61 @@ namespace cf {
 
     // ---------- stmts ----------
 
+    /**
+     * Otimiza um bloco de statements.
+     * @param body vetor de statements a otimizar
+     * @return void
+     */
     void Optimizer::optimize_block(std::vector<StmtPtr>& body) {
         for (auto& st : body) {
             optimize_stmt(st);
         }
     }
 
+    /**
+     * Otimiza um statement genérico, despachando para funções especializadas.
+     * @param s statement a otimizar
+     * @return void
+     */
     void Optimizer::optimize_stmt(StmtPtr& s) {
         if (!s) return;
 
+        // Se for decl, nada a otimizar
         if (auto* d = dynamic_cast<StmtDecl*>(s.get())) {
             (void)d;
             return; // nada a otimizar em declarações simples
         }
+
+        // Se for atribuição, otimiza o valor
         if (auto* a = dynamic_cast<StmtAssign*>(s.get())) {
             a->value = optimize_expr(std::move(a->value));
             return;
         }
+
+        // Se for print, otimiza os argumentos
         if (auto* p = dynamic_cast<StmtPrint*>(s.get())) {
             for (auto& e : p->args) {
                 e = optimize_expr(std::move(e));
             }
             return;
         }
+
+        // Se for while, otimiza a condição e o corpo
         if (auto* w = dynamic_cast<StmtWhile*>(s.get())) {
             w->cond = optimize_expr(std::move(w->cond));
             optimize_block(w->body);
             return;
         }
+
+        // Se for if, otimiza a condição e os corpos then/else
         if (auto* i = dynamic_cast<StmtIf*>(s.get())) {
             i->cond = optimize_expr(std::move(i->cond));
             optimize_block(i->then_body);
             optimize_block(i->else_body);
             return;
         }
+
+        // Se for for, otimiza begin, end, step e o corpo
         if (auto* f = dynamic_cast<StmtFor*>(s.get())) {
             f->begin = optimize_expr(std::move(f->begin));
             f->end   = optimize_expr(std::move(f->end));
@@ -221,12 +275,19 @@ namespace cf {
             optimize_block(f->body);
             return;
         }
+
+        // Se for bloco, otimiza o corpo
         if (auto* b = dynamic_cast<StmtBlock*>(s.get())) {
             optimize_block(b->body);
             return;
         }
     }
 
+    /**
+     * Executa o otimizador no programa fornecido, otimizando todos os statements top-level.
+     * @param p programa a otimizar
+     * @return void
+     */
     void Optimizer::run(Program& p) {
         for (auto& st : p.items) {
             optimize_stmt(st);

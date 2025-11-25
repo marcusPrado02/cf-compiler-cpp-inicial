@@ -31,6 +31,7 @@ namespace cf {
      * - ExprIdent: identificadores (ex: varName, _temp, contador1)
      * - ExprBinary: expressões binárias (ex: a + b, x * y)
      * - ExprGroup: expressões agrupadas por parênteses (ex: (a + b) * c)
+     * - ExprBool: valores booleanos (true, false)
      */
     struct ExprInteger : Expr {
         std::string digits; // como lido
@@ -67,6 +68,11 @@ namespace cf {
         ExprPtr inner;
     };
 
+    struct ExprBool : Expr {
+        bool value;
+    };
+
+
     // ---- Comandos ----
     /**
      * Comandos suportados:
@@ -87,6 +93,7 @@ namespace cf {
     struct StmtDecl : Stmt {
         CfType type{CfType::Desconhecido};
         std::string name;
+        ExprPtr init;
     };
 
     struct StmtAssign : Stmt {
