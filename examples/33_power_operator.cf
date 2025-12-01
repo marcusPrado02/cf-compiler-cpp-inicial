@@ -1,0 +1,2 @@
+Inteiro r <- 2**10;
+Imprimir("2^10 = " + r + "\n");

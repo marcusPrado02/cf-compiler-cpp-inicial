@@ -145,38 +145,75 @@ namespace cf
     }
 
     /**
-     * Emite a seção .rodata com todas as strings do pool.
+     * Emite a seção .rodata com as strings do pool.
      *
      * - Se o pool estiver vazio, não faz nada.
-     * - Emite a diretiva .section .rodata.
-     * - Para cada string no pool, emite um rótulo L.str.<index> e a diretiva .asciz com o valor da string.
-     * - Escapa aspas e barras na string para assembly.
-     * - Usa \n para novas linhas.
-     * - Adiciona a saída ao texto gerado.
+     * - Para cada string no pool, emite um rótulo e a diretiva .asciiz com o conteúdo escapado.
+     * - Adiciona tudo ao buffer de dados (data_), não ao texto principal (text_).
+     * - Emite a seção .rodata no formato apropriado.
      */
     void Codegen::emit_rodata()
     {
         if (str_pool_.empty())
             return;
-        ln(".data");
+
+        std::ostringstream all;
+        all << ".data\n";
+
         for (auto const &it : str_pool_)
         {
-            std::ostringstream os;
-            os << "L.str." << it.labelIndex << ":\n"
-               << "  .asciiz \"";
-            // escapar aspas e barras para assembly
-            for (char c : it.value)
+            all << "L.str." << it.labelIndex << ":\n"
+                << "  .asciiz \"";
+
+            const std::string &s = it.value;
+
+            for (std::size_t i = 0; i < s.size(); ++i)
             {
-                if (c == '\\\\' || c == '\"')
-                    os << '\\\\' << c;
-                else if (c == '\\n')
-                    os << "\\n";
+                char c = s[i];
+
+                // Trata sequências de escape vindas do código fonte: \n, \t, \",
+                if (c == '\\' && i + 1 < s.size())
+                {
+                    char n = s[i + 1];
+                    switch (n)
+                    {
+                    case 'n':
+                        all << "\\n"; // quebra de linha
+                        ++i;          // pula o 'n'
+                        break;
+                    case 't':
+                        all << "\\t"; // tab
+                        ++i;
+                        break;
+                    case '\\':
+                        all << "\\\\"; // barra invertida
+                        ++i;
+                        break;
+                    case '\"':
+                        all << "\\\""; // aspas
+                        ++i;
+                        break;
+                    default:
+                        // escape desconhecido: só imprime os dois como vieram
+                        all << '\\' << n;
+                        ++i;
+                        break;
+                    }
+                }
                 else
-                    os << c;
+                {
+                    // precisa escapar aspas e barra "soltas"
+                    if (c == '\"' || c == '\\')
+                        all << '\\' << c;
+                    else
+                        all << c;
+                }
             }
-            os << "\"\n";
-            out(os.str());
+
+            all << "\"\n";
         }
+
+        data_ += all.str();
     }
 
     // ---------- Util ----------
@@ -282,22 +319,38 @@ namespace cf
     /**
      * Emite código para uma expressão binária.
      *
-     * - Emite o código do lado esquerdo (lhs) para $a0, move para $t0.
-     * - Emite o código do lado direito (rhs) para $a0, move para $t1.
-     * - Dependendo do operador, emite a instrução apropriada:
-     *   - Aritméticos (+, -, *, /, %, ^): usa add, sub, mul, div, rem, ou um loop para pow.
-     *   - Relacionais (==, !=, >, <, >=, <=): usa seqz, snez, slt, xori conforme necessário.
-     *   - Lógicos (&&, ||): trata os operandos como truthy, usa snez e and/xor, normaliza no fim.
-     * - O resultado final fica em $a0.
+     * - O resultado final da expressão fica em $a0.
+     * - Suporta apenas tipos Inteiro para operações aritméticas e relacionais.
+     * - Para operadores lógicos, normaliza o resultado para 0xFF/0x00.
+     * - Lança erro se o operador não for suportado.
+     * - Suporta o operador de potência (Pow) com loop.
+     * - Não trata concatenação de strings aqui; isso é feito em outro lugar.
+     * - Assume que as expressões LHS e RHS já foram verificadas semanticamente.
+     * - Não faz verificação de tipos; assume que os tipos são compatíveis para o operador.
+     * - Não lida com estouro de inteiros ou erros de divisão por zero.
+     * - Usa registradores temporários $t0, $t1, $t2, $t3 conforme necessário.
+     * - Empilha o valor de LHS na stack para preservar durante a avaliação de RHS.
+     * - Desempilha o valor de LHS após avaliar RHS.
+     * - O código gerado é adicionado ao buffer de texto principal (text_).
      */
     void Codegen::emit_expr_bin(const ExprBinary &b)
     {
-        // lhs -> $t0 ; rhs -> $a0 ; guarda rhs em $t1
+        // 1) avalia LHS em $a0
         emit_expr(*b.lhs);
-        ln("  move $t0, $a0");
-        emit_expr(*b.rhs);
-        ln("  move $t1, $a0");
 
+        // 2) empilha LHS para não ser destruído por chamadas recursivas
+        ln("  addiu $sp, $sp, -4      # push lhs");
+        ln("  sw $a0, 0($sp)");
+
+        // 3) avalia RHS em $a0
+        emit_expr(*b.rhs);
+
+        // 4) carrega RHS em $t1 e recupera LHS em $t0
+        ln("  move $t1, $a0          # rhs");
+        ln("  lw $t0, 0($sp)         # lhs");
+        ln("  addiu $sp, $sp, 4      # pop lhs");
+
+        // 5) agora $t0 = lhs, $t1 = rhs, pode aplicar o operador
         switch (b.op)
         {
         // Aritméticos
@@ -311,7 +364,9 @@ namespace cf
             ln("  mul $a0, $t0, $t1");
             break;
         case BinOp::Div:
-            ln("  div $a0, $t0, $t1");
+            // $a0 = $t0 / $t1 (quociente inteiro)
+            ln("  div $t0, $t1"); // LO = quociente, HI = resto
+            ln("  mflo $a0");     // $a0 = quociente
             break;
         case BinOp::Mod:
             ln("  div $t0, $t1"); // quociente em LO, resto em HI
@@ -360,7 +415,7 @@ namespace cf
             ln("  xori $a0, $a0, 1");  // !($t0 < $t1)
             break;
 
-            // Lógicos (&, ^) — tratamos operands como truthy e normalizamos no fim
+        // Lógicos (&, ^) — tratamos operands como truthy e normalizamos no fim
         case BinOp::And:
             ln("  sltu $t0, $zero, $t0");
             ln("  sltu $t1, $zero, $t1");
@@ -480,11 +535,24 @@ namespace cf
 
     /**
      * Emite código para uma declaração.
+     *
+     * - Declara a variável no escopo atual.
+     * - Se houver inicialização (Tipo nome <- Expr):
+     *   - Emite o código da expressão em $a0.
+     *   - Armazena o valor de $a0 na variável usando emit_store_a0_to_var.
      */
     void Codegen::emit_decl(const StmtDecl &s)
     {
         // reservar espaço e registrar offset
-        declare(s.name, s.type);
+        VarInfo &v = declare(s.name, s.type);
+
+        // se houver inicialização (Tipo nome <- Expr),
+        // avalia expressão em $a0 e armazena no slot da variável
+        if (s.init)
+        {
+            emit_expr(*s.init); // resultado em $a0
+            emit_store_a0_to_var(v, s.init->inferred);
+        }
     }
 
     /**
@@ -507,37 +575,24 @@ namespace cf
     /**
      * Emite código para uma instrução de impressão.
      *
-     * - Para cada argumento:
-     *   - Se for ExprString, emite a expressão (já chama print_str via syscall 4).
-     *   - Senão:
-     *       - Emite a expressão em $a0.
-     *       - Se o tipo inferido for Caractere, usa print_char (syscall 11).
-     *       - Caso contrário (Inteiro ou Logico), usa print_int (syscall 1).
+     * - Para cada argumento na lista:
+     *   - Se a expressão (ou subexpressões) contiver string, trata '+' como concatenação, chamando emit_print_concat.
+     *   - Caso contrário, emite a expressão normalmente com emit_print_expr.
      */
     void Codegen::emit_print(const StmtPrint &s)
     {
         for (auto const &e : s.args)
         {
-            // Strings continuam com caminho especial, pois emit_expr já imprime via syscall 4
-            if (dynamic_cast<ExprString *>(e.get()))
+            // Se a expressão (ou subexpressões) contiver string,
+            // tratamos '+' como concatenação, NÃO como soma numérica.
+            if (expr_has_string(*e))
             {
-                emit_expr(*e); // já imprime via syscall 4
+                emit_print_concat(*e);
             }
             else
             {
-                // Avalia a expressão em $a0
-                emit_expr(*e);
-
-                // Decide syscall baseado no tipo inferido
-                if (e->inferred == CfType::Caractere)
-                {
-                    ln("  li $v0, 11"); // print_char
-                }
-                else
-                {
-                    ln("  li $v0, 1"); // print_int (Inteiro ou Logico)
-                }
-                ln("  syscall");
+                // Sem strings: imprime normalmente (número, char, etc.)
+                emit_print_expr(*e);
             }
         }
     }
@@ -606,23 +661,23 @@ namespace cf
     /**
      * Emite código para uma instrução for.
      *
-     * - Entra em um novo escopo e declara a variável do loop como Inteiro.
-     * - Emite o código para a expressão begin e armazena o valor na variável do loop.
-     * - Gera rótulos únicos para a condição, corpo, incremento e fim do laço.
+     * - Gera rótulos únicos para condição, corpo, incremento e fim.
+     * - Declara a variável de iteração no escopo atual.
+     * - Inicializa a variável com o valor de begin.
      * - Emite o rótulo da condição:
-     *   - Carrega a variável do loop em $t0.
-     *   - Emite o código para a expressão end e move o valor para $t1.
-     *   - Compara $t0 (variável do loop) com $t1 (end); se $t0 > $t1, salta para o rótulo do fim.
+     *   - Carrega a variável de iteração em $t0.
+     *   - Recalcula o valor de end em $t1.
+     *   - Se o step for positivo (ou padrão), verifica se i <= end; se negativo, verifica se i >= end.
+     *   - Se a condição falhar, salta para o rótulo do fim.
      * - Emite o rótulo do corpo:
      *   - Entra em um novo escopo e emite o corpo do laço.
-     *   - Sai do escopo do corpo.
+     *   - Sai do escopo.
      * - Emite o rótulo do incremento:
-     *   - Carrega a variável do loop em $t0.
-     *   - Emite o código para a expressão step (ou carrega 1 se não houver) e move o valor para $t2.
-     *   - Soma $t0 (variável do loop) com $t2 (step) e armazena de volta na variável do loop.
+     *   - Carrega a variável de iteração em $t0.
+     *   - Recalcula o valor do step em $t2 (ou usa 1 se não fornecido).
+     *   - Atualiza a variável de iteração com i + step.
      *   - Salta de volta para o rótulo da condição.
-     * - Emite o rótulo do fim do laço e sai do escopo do loop.
-     *   - Sai do escopo do loop.
+     * - Emite o rótulo do fim e sai do escopo.
      */
     void Codegen::emit_for(const StmtFor &s)
     {
@@ -633,6 +688,22 @@ namespace cf
         // init i <- begin
         emit_expr(*s.begin);
         emit_store_a0_to_var(vi, CfType::Inteiro);
+
+        // --- NOVO: detectar se o step é negativo constante ---
+        bool descending = false;
+        if (s.step.has_value())
+        {
+            if (auto *lit = dynamic_cast<const ExprInteger *>(s.step->get()))
+            {
+                // aqui assumo que 'digits' guarda o número com sinal, ex: "-1"
+                int val = std::stoi(lit->digits);
+                if (val < 0)
+                {
+                    descending = true;
+                }
+            }
+        }
+        // -----------------------------------------------------
 
         std::string Lcond = new_label("for.cond");
         std::string Lbody = new_label("for.body");
@@ -650,9 +721,18 @@ namespace cf
         emit_expr(*s.end);
         ln("  move $t1, $a0");
 
-        // if (i > end) goto end  (laço inclusivo i <= end)
-        ln("  slt $a0, $t1, $t0"); // $a0 = (end < i)
-        ln("  bne $a0, $zero, " + Lend);
+        if (!descending)
+        {
+            // passo > 0 (ou default): while (i <= end)
+            ln("  slt $a0, $t1, $t0");       // end < i ?
+            ln("  bne $a0, $zero, " + Lend); // se i > end, sai
+        }
+        else
+        {
+            // passo negativo: while (i >= end)
+            ln("  slt $a0, $t0, $t1");       // i < end ?
+            ln("  bne $a0, $zero, " + Lend); // se i < end, sai
+        }
 
         // ---------- corpo ----------
         ln(Lbody + ":");
@@ -766,27 +846,117 @@ namespace cf
         // Epílogo: exit(0)
         ln("  li $v0, 10"); // syscall 10 = exit
         ln("  syscall");
-
-        // Seção de dados para strings
-        emit_rodata();
     }
 
     /**
      * Emite o código assembly completo para o programa.
      *
-     * - Inicializa o texto, frame_size_, label_id_, escopos e pool de strings.
-     * - Chama emit_program para gerar o código do programa.
-     * - Retorna o texto gerado como uma string.
+     * - Limpa os buffers de texto e dados, reseta frame_size_ e label_id_.
+     * - Emite o código do programa principal (preenchendo text_ e str_pool_).
+     * - Emite a seção .rodata com as strings do pool (preenchendo data_).
+     * - Concatena data_ e text_ na ordem correta (.data primeiro) e retorna como string.
      */
     std::string Codegen::emit(const Program &p)
     {
         text_.clear();
+        data_.clear(); // <-- limpar também o buffer de dados
         frame_size_ = 0;
         label_id_ = 0;
         scopes_.clear();
         str_pool_.clear();
 
+        // Gera apenas o código (.text) e preenche str_pool_
         emit_program(p);
-        return text_;
+
+        // Agora, com o pool de strings preenchido, geramos a .data
+        emit_rodata();
+
+        // Monta a saída final: primeiro .data, depois .text
+        std::string finalAsm;
+        finalAsm.reserve(data_.size() + text_.size());
+        finalAsm += data_;
+        finalAsm += text_;
+        return finalAsm;
     }
+
+    /**
+     * Verifica se uma expressão contém alguma string literal.
+     *
+     * - Se a expressão for ExprString, retorna true.
+     * - Se for ExprGroup, verifica a expressão interna.
+     * - Se for ExprBinary, verifica ambos os lados (lhs e rhs).
+     * - Caso contrário, retorna false.
+     */
+    bool Codegen::expr_has_string(const Expr &e) const
+    {
+        if (dynamic_cast<const ExprString *>(&e))
+            return true;
+
+        if (auto *g = dynamic_cast<const ExprGroup *>(&e))
+            return expr_has_string(*g->inner);
+
+        if (auto *b = dynamic_cast<const ExprBinary *>(&e))
+            return expr_has_string(*b->lhs) || expr_has_string(*b->rhs);
+
+        return false;
+    }
+
+    /**
+     * Emite código para imprimir uma expressão simples.
+     *
+     * - Se a expressão for uma string literal, reaproveita emit_expr, que já faz syscall 4.
+     * - Caso contrário, emite a expressão em $a0.
+     *   - Se o tipo inferido for Caractere, usa print_char (syscall 11).
+     *   - Caso contrário (Inteiro ou Logico), usa print_int (syscall 1).
+     */
+    void Codegen::emit_print_expr(const Expr &e)
+    {
+        // String literal pura: reaproveita emit_expr, que já faz syscall 4
+        if (dynamic_cast<const ExprString *>(&e))
+        {
+            emit_expr(e); // la $a0, L.str.X; li $v0, 4; syscall
+            return;
+        }
+
+        // Caso geral: numérico / lógico / caractere
+        emit_expr(e); // resultado em $a0
+
+        if (e.inferred == CfType::Caractere)
+        {
+            ln("  li $v0, 11"); // print_char
+        }
+        else
+        {
+            ln("  li $v0, 1"); // print_int (Inteiro ou Logico)
+        }
+        ln("  syscall");
+    }
+
+    /**
+     * Emite código para imprimir uma expressão com concatenação.
+     *
+     * - Se a expressão for uma concatenação com '+', e algum dos lados for string,
+     *   quebra a expressão em partes e emite cada parte separadamente.
+     * - Caso contrário, emite a expressão como uma única unidade.
+     *
+     */
+    void Codegen::emit_print_concat(const Expr &e)
+    {
+        // Se for concatenação com '+' e tiver string em algum lado,
+        // não avaliamos como soma: quebramos em partes.
+        if (auto *b = dynamic_cast<const ExprBinary *>(&e))
+        {
+            if (b->op == BinOp::Add &&
+                (expr_has_string(*b->lhs) || expr_has_string(*b->rhs)))
+            {
+                emit_print_concat(*b->lhs);
+                emit_print_concat(*b->rhs);
+                return;
+            }
+        }
+
+        // Caso contrário, imprime como expressão simples
+        emit_print_expr(e);
+    }
+
 }

@@ -1,17 +1,13 @@
-/* Arquivo propositalmente com erros semanticos */
 
 Inteiro x;
 Logico b;
 
 x <- 1 + 2;
 
-/* ERRO 1: variavel nao declarada */
 y <- x + 1;
 
-/* ERRO 2: atribuicao de inteiro em Logico */
 b <- 1;
 
-/* ERRO 3: Se com condicao nao-logica */
 Se x {
     Imprimir("isso nao deve passar na analise semantica\n");
 }

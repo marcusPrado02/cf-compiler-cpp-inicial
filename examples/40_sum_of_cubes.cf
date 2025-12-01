@@ -1,0 +1,8 @@
+Inteiro soma <- 0;
+
+Para i em (1, 5, 1)
+{
+    soma <- soma + i*i*i;
+}
+
+Imprimir("Soma cubos = " + soma + "\n");

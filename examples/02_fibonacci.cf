@@ -1,0 +1,11 @@
+Inteiro a <- 0, b <- 1, i <- 1;
+Imprimir(a + " " + b + "\n");
+
+Enquanto i < 8
+{
+    Inteiro c <- a + b;
+    Imprimir(c + "\n");
+    a <- b;
+    b <- c;
+    i <- i + 1;
+}

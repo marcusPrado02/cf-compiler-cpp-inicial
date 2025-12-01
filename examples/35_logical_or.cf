@@ -1,0 +1,9 @@
+Inteiro a <- 0, b <- 1;
+Se a = 1 ^ b = 1
+{
+    Imprimir("Algum e 1\n");
+}
+Senao
+{
+    Imprimir("Nenhum e 1\n");
+}

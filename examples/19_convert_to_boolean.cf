@@ -1,0 +1,7 @@
+Inteiro x <- 0;
+Logico l;
+
+Se x = 0 { l <- Mentira; }
+Senao { l <- Verdade; }
+
+Imprimir("Logico convertido\n");

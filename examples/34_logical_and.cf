@@ -1,0 +1,10 @@
+Inteiro a <- 5, b <- 10;
+
+Se a < b & b > 0
+{
+    Imprimir("Verdade\n");
+}
+Senao
+{
+    Imprimir("Mentira\n");
+}

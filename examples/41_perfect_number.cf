@@ -1,0 +1,15 @@
+Inteiro n <- 6, s <- 0;
+
+Para i em (1, n-1, 1)
+{
+    Se n % i = 0 { s <- s + i; }
+}
+
+Se s = n
+{
+    Imprimir("Perfeito\n");
+}
+Senao
+{
+    Imprimir("Nao perfeito\n");
+}

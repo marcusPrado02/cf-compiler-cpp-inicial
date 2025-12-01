@@ -1,0 +1,8 @@
+Inteiro cnt <- 0;
+
+Para i em (1, 50, 1)
+{
+    Se i % 5 = 0 { cnt <- cnt + 1; }
+}
+
+Imprimir("Divisiveis = " + cnt + "\n");

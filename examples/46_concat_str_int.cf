@@ -1,0 +1,2 @@
+Inteiro x <- 42;
+Imprimir("Valor: " + x + "\n");

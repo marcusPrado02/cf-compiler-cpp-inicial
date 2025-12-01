@@ -65,10 +65,14 @@ namespace cf
         // pool de strings (.rodata)
         int put_string(const std::string &s);
         void emit_rodata();
+        bool expr_has_string(const Expr &e) const;
+        void emit_print_expr(const Expr &e);
+        void emit_print_concat(const Expr &e);
 
     private:
         // saída
         std::string text_;
+        std::string data_;
 
         // frame-pointer base e alocação dinâmica
         int frame_size_{0}; // bytes alocados desde a entrada do _start

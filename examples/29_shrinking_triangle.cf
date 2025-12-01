@@ -1,0 +1,8 @@
+Para i em (5, 1, -1)
+{
+    Para j em (1, i, 1)
+    {
+        Imprimir("*");
+    }
+    Imprimir("\n");
+}

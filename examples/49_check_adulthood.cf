@@ -1,0 +1,10 @@
+Inteiro idade <- 17;
+
+Se idade >= 18
+{
+    Imprimir("Maior\n");
+}
+Senao
+{
+    Imprimir("Menor\n");
+}

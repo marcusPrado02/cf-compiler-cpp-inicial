@@ -1,0 +1,8 @@
+Inteiro a <- 7, b <- 5, r <- 0;
+
+Para i em (1, b, 1)
+{
+    r <- r + a;
+}
+
+Imprimir("Resultado = " + r + "\n");

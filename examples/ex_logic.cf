@@ -7,21 +7,18 @@ Imprimir("=== Exemplo: Lógico ===\n");
 a <- Verdade;
 b <- Mentira;
 
-/* Se (a & b) */
 Se a & b {
     Imprimir("a & b = Verdade\n");
 } Senao {
     Imprimir("a & b = Mentira\n");
 }
 
-/* Se (a | b) */
 Se a | b {
     Imprimir("a | b = Verdade\n");
 } Senao {
     Imprimir("a | b = Mentira\n");
 }
 
-/* combinando comparacoes */
 Inteiro x;
 Inteiro y;
 x <- 5;

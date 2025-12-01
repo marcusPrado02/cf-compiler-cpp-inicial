@@ -3,14 +3,12 @@ Inteiro soma;
 
 Imprimir("=== Exemplo: While + For ===\n");
 
-/* While: conta de 3 ate 1 */
 i <- 3;
 Enquanto i > 0 {
     Imprimir("While: i = ", i, "\n");
     i <- i - 1;
 }
 
-/* For: soma 1..5 */
 soma <- 0;
 Para i em (1, 5, 1) {
     soma <- soma + i;

@@ -1,0 +1,8 @@
+Inteiro a <- 20, b <- 3;
+
+Enquanto a >= b
+{
+    a <- a - b;
+}
+
+Imprimir("Resto = " + a + "\n");

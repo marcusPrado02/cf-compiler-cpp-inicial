@@ -1,0 +1,8 @@
+Inteiro n <- 6, p <- 1;
+
+Para i em (1, n, 1)
+{
+    p <- p * i;
+}
+
+Imprimir("Produto = " + p + "\n");

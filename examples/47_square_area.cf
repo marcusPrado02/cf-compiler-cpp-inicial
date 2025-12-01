@@ -1,0 +1,3 @@
+Inteiro l <- 5, a <- l*l;
+
+Imprimir("Area = " + a + "\n");

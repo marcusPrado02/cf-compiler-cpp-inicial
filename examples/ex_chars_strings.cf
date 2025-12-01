@@ -8,7 +8,7 @@ c <- 'A';
 codigo <- 0;
 offset <- 2;
 
-codigo <- c + offset;   /* promove char para inteiro */
+codigo <- c + offset;   
 
 Imprimir("Caractere c = ", c, "\n");
 Imprimir("c + ", offset, " (em inteiro) = ", codigo, "\n");

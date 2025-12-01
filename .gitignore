@@ -29,6 +29,7 @@ Testing/
 *.pch
 *.mod
 *.smod
+*.asm
 
 # Static / Shared libs
 *.a

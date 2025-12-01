@@ -1,0 +1,11 @@
+Inteiro soma <- 0;
+
+Para i em (1, 20, 1)
+{
+    Se i % 2 <> 0
+    {
+        soma <- soma + i;
+    }
+}
+
+Imprimir("Soma impares = " + soma + "\n");

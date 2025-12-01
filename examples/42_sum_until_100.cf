@@ -1,0 +1,9 @@
+Inteiro s <- 0, i <- 1;
+
+Enquanto s < 100
+{
+    s <- s + i;
+    i <- i + 1;
+}
+
+Imprimir("Soma final = " + s + "\n");

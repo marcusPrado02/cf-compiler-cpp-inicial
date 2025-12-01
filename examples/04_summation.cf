@@ -1,0 +1,8 @@
+Inteiro n <- 20, soma <- 0;
+
+Para i em (1, n, 1)
+{
+    soma <- soma + i;
+}
+
+Imprimir("Soma = " + soma + "\n");
