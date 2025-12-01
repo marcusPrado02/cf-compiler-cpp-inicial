@@ -1,0 +1,10 @@
+Inteiro i <- 0;
+
+Enquanto i <= 50
+{
+    Se i % 2 <> 0
+    {
+        Imprimir(i + "\n");
+    }
+    i <- i + 1;
+}

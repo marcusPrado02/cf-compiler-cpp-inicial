@@ -1,0 +1,10 @@
+Inteiro n <- 27;
+
+Se n % 3 = 0
+{
+    Imprimir("Multiplo de 3\n");
+}
+Senao
+{
+    Imprimir("Nao multiplo\n");
+}

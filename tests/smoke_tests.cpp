@@ -1,4 +1,3 @@
-\
 #include <cassert>
 #include <string>
 #include "cf/driver/driver.hpp"

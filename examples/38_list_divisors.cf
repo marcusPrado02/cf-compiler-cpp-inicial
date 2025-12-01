@@ -1,0 +1,9 @@
+Inteiro n <- 20;
+
+Para i em (1, n, 1)
+{
+    Se n % i = 0
+    {
+        Imprimir(i + "\n");
+    }
+}

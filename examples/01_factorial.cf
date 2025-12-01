@@ -1,0 +1,14 @@
+Inteiro n <- 5, r <- 1;
+Enquanto n > 1
+{
+    r <- r * n;
+    n <- n - 1;
+}
+
+Imprimir("n final = ");
+Imprimir(n);
+Imprimir("\n");
+
+Imprimir("r final = ");
+Imprimir(r);
+Imprimir("\n");

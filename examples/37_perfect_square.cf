@@ -1,0 +1,10 @@
+Inteiro n <- 49, i <- 1, achou <- 0;
+
+Enquanto i*i <= n
+{
+    Se i*i = n { achou <- 1; }
+    i <- i + 1;
+}
+
+Se achou = 1 { Imprimir("Quadrado perfeito\n"); }
+Senao { Imprimir("Nao e quadrado perfeito\n"); }

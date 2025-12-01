@@ -1,0 +1,33 @@
+Lógico a;
+Lógico b;
+Lógico c;
+
+Imprimir("=== Exemplo: Lógico ===\n");
+
+a <- Verdade;
+b <- Mentira;
+
+Se a & b {
+    Imprimir("a & b = Verdade\n");
+} Senao {
+    Imprimir("a & b = Mentira\n");
+}
+
+Se a | b {
+    Imprimir("a | b = Verdade\n");
+} Senao {
+    Imprimir("a | b = Mentira\n");
+}
+
+Inteiro x;
+Inteiro y;
+x <- 5;
+y <- 10;
+
+c <- (x < y) & a;
+
+Se c {
+    Imprimir("x < y E a == Verdade\n");
+} Senao {
+    Imprimir("x < y E a == Mentira\n");
+}

@@ -1,0 +1,16 @@
+Caractere c;
+Inteiro codigo;
+Inteiro offset;
+
+Imprimir("=== Exemplo: Caractere + Strings ===\n");
+
+c <- 'A';
+codigo <- 0;
+offset <- 2;
+
+codigo <- c + offset;   
+
+Imprimir("Caractere c = ", c, "\n");
+Imprimir("c + ", offset, " (em inteiro) = ", codigo, "\n");
+
+Imprimir("Mensagem completa: ", "CF suporta strings, chars e inteiros misturados no Imprimir.\n");

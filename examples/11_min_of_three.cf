@@ -1,0 +1,6 @@
+Inteiro a <- 10, b <- 7, c <- 20, m <- a;
+
+Se b < m { m <- b; }
+Se c < m { m <- c; }
+
+Imprimir("Min = " + m + "\n");

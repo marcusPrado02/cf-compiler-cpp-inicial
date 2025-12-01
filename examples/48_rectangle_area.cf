@@ -1,0 +1,4 @@
+Inteiro w <- 4, h <- 7;
+Inteiro a <- w*h;
+
+Imprimir("Area = " + a + "\n");

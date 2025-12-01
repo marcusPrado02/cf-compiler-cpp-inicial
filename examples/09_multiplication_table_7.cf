@@ -1,0 +1,6 @@
+Inteiro n <- 7;
+
+Para i em (1, 10, 1)
+{
+    Imprimir(n + " x " + i + " = " + (n*i) + "\n");
+}

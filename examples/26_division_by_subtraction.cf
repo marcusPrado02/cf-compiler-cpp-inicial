@@ -1,0 +1,9 @@
+Inteiro a <- 20, b <- 3, q <- 0;
+
+Enquanto a >= b
+{
+    a <- a - b;
+    q <- q + 1;
+}
+
+Imprimir("Quociente = " + q + "\n");

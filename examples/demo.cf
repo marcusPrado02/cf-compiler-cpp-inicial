@@ -1,0 +1,26 @@
+Inteiro X;
+Caractere C;
+Logico B;
+
+X <- 2 ** 3 + 1;
+C <- 'A';
+B <- Verdade;
+
+Imprimir("X inicial = ", X, "\n");
+Imprimir("C = ", C, "\n");
+
+Se X >= 9 {
+  Imprimir("X eh maior ou igual a 9\n");
+} Senao {
+  Imprimir("X eh menor que 9\n");
+}
+
+Enquanto X <> 0 {
+  Imprimir("X = ", X, "\n");
+  X <- X - 1;
+}
+
+Imprimir("Loop Para:\n");
+Para i em (1, 5, 2) {
+  Imprimir("i = ", i, "\n");
+}

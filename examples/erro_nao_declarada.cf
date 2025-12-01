@@ -1,0 +1,4 @@
+Inteiro x;
+
+x <- 10;
+y <- x + 5;   $ 'y' nunca foi declarada

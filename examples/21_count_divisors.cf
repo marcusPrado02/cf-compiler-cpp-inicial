@@ -1,0 +1,9 @@
+Inteiro n <- 12, d <- 1, cnt <- 0;
+
+Enquanto d <= n
+{
+    Se n % d = 0 { cnt <- cnt + 1; }
+    d <- d + 1;
+}
+
+Imprimir("Divisores = " + cnt + "\n");

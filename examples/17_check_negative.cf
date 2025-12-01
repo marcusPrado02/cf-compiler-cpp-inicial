@@ -1,0 +1,10 @@
+Inteiro n <- -3;
+
+Se n < 0
+{
+    Imprimir("Negativo\n");
+}
+Senao
+{
+    Imprimir("Nao negativo\n");
+}

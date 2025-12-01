@@ -1,0 +1,4 @@
+Para i em (0, 20, 2)
+{
+    Imprimir(i + "\n");
+}

@@ -1,0 +1,13 @@
+
+Inteiro x;
+Logico b;
+
+x <- 1 + 2;
+
+y <- x + 1;
+
+b <- 1;
+
+Se x {
+    Imprimir("isso nao deve passar na analise semantica\n");
+}

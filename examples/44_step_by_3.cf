@@ -1,0 +1,4 @@
+Para i em (30, 0, -3)
+{
+    Imprimir(i + "\n");
+}
